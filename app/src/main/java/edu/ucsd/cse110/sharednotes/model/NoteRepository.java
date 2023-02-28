@@ -86,17 +86,16 @@ public class NoteRepository {
     // Remote Methods
     // ==============
 
-    // don't know how to convert to live data
     public LiveData<Note> getRemote(String title) {
         // try to get remote thing
         var note = new MutableLiveData<>(api.getNote(title));
         var executor = Executors.newSingleThreadScheduledExecutor();
         noteFuture = executor.scheduleAtFixedRate(() -> {
-            note.postValue(api.getNote(title));}, 0, 1000, TimeUnit.MILLISECONDS);
+            note.postValue(api.getNote(title));}, 0, 3000, TimeUnit.MILLISECONDS);
         return note;
     }
 
     public void upsertRemote(Note note) {
-        api.putNote(note.title, note);
+        api.putNote(note);
     }
 }

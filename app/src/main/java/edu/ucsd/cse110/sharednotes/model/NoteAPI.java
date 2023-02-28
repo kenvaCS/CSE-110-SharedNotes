@@ -73,12 +73,12 @@ public class NoteAPI {
         return null;
     }
 
-    public void putNote(String title, Note note){
+    public void putNote(Note note){
         final MediaType JSON = MediaType.get("application/json; charset=utf-8");
         OkHttpClient client = new OkHttpClient();
         var body = RequestBody.create(noteToJson(note), JSON);
         var request = new Request.Builder()
-                .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + note.title)
                 .post(body)
                 .build();
         try(var response = client.newCall(request).execute()) {
