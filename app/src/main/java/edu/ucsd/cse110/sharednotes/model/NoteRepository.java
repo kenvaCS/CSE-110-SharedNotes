@@ -2,15 +2,23 @@ package edu.ucsd.cse110.sharednotes.model;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MediatorLiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class NoteRepository {
     private final NoteDao dao;
+    private final NoteAPI api = new NoteAPI();
+    private final MutableLiveData<Note> recentNoteData;
+    private ScheduledFuture<?> noteFuture;
 
     public NoteRepository(NoteDao dao) {
         this.dao = dao;
+        this.recentNoteData = new MutableLiveData<>();
     }
 
     // Synced Methods
@@ -78,13 +86,17 @@ public class NoteRepository {
     // Remote Methods
     // ==============
 
+    // don't know how to convert to live data
     public LiveData<Note> getRemote(String title) {
-        // TODO: Implement getRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+        // try to get remote thing
+        var note = new MutableLiveData<>(api.getNote(title));
+        var executor = Executors.newSingleThreadScheduledExecutor();
+        noteFuture = executor.scheduleAtFixedRate(() -> {
+            note.postValue(api.getNote(title));}, 0, 1000, TimeUnit.MILLISECONDS);
+        return note;
     }
 
     public void upsertRemote(Note note) {
-        // TODO: Implement upsersRemote!
-        throw new UnsupportedOperationException("Not implemented yet");
+        api.putNote(note.title, note);
     }
 }
