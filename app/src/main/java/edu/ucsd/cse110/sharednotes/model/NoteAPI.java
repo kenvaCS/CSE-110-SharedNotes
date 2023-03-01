@@ -1,15 +1,20 @@
 package edu.ucsd.cse110.sharednotes.model;
 
+import static android.util.Log.println;
+
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 
 import com.google.gson.Gson;
 
+import java.io.IOException;
+
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class NoteAPI {
     // TODO: Implement the API using OkHttp!
@@ -70,19 +75,21 @@ public class NoteAPI {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return null;
+        return new Note(title, "");
     }
 
     public void putNote(Note note){
+        var title = note.title.replace(" ", "%20");
         final MediaType JSON = MediaType.get("application/json; charset=utf-8");
         OkHttpClient client = new OkHttpClient();
         var body = RequestBody.create(noteToJson(note), JSON);
         var request = new Request.Builder()
-                .url("https://sharednotes.goto.ucsd.edu/notes/" + note.title)
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
                 .post(body)
                 .build();
-        try(var response = client.newCall(request).execute()) {
-            assert response.body() != null;
+        try (Response response = client.newCall(request).execute()) {
+            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+            System.out.println(response.body().toString());
         } catch (Exception e) {
             e.printStackTrace();
         }

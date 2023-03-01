@@ -13,12 +13,10 @@ import java.util.concurrent.TimeUnit;
 public class NoteRepository {
     private final NoteDao dao;
     private final NoteAPI api = new NoteAPI();
-    private final MutableLiveData<Note> recentNoteData;
     private ScheduledFuture<?> noteFuture;
 
     public NoteRepository(NoteDao dao) {
         this.dao = dao;
-        this.recentNoteData = new MutableLiveData<>();
     }
 
     // Synced Methods
@@ -88,14 +86,16 @@ public class NoteRepository {
 
     public LiveData<Note> getRemote(String title) {
         // try to get remote thing
-        var note = new MutableLiveData<>(api.getNote(title));
+        var noteData = new MutableLiveData<>(api.getNote(title));
         var executor = Executors.newSingleThreadScheduledExecutor();
         noteFuture = executor.scheduleAtFixedRate(() -> {
-            note.postValue(api.getNote(title));}, 0, 3000, TimeUnit.MILLISECONDS);
-        return note;
+            noteData.postValue(api.getNote(title));}, 0, 3000, TimeUnit.MILLISECONDS);
+        return noteData;
     }
 
     public void upsertRemote(Note note) {
-        api.putNote(note);
+        if(note != null) {
+            api.putNote(note);
+        }
     }
 }

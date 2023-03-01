@@ -7,9 +7,12 @@ import androidx.room.Index;
 import androidx.room.PrimaryKey;
 
 import com.google.gson.Gson;
+import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 
 import java.io.InputStreamReader;
+
+import edu.ucsd.cse110.sharednotes.view.TimestampAdapter;
 
 @Entity(tableName = "notes")
 public class Note {
@@ -29,6 +32,7 @@ public class Note {
      * Defaults to 0 (Jan 1, 1970), so that if a note already exists remotely, its content is
      * always preferred to a new empty note.
      */
+    @JsonAdapter(TimestampAdapter.class)
     @SerializedName(value = "updated_at", alternate = "updatedAt")
     public long updatedAt = 0;
 
