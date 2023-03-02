@@ -9,6 +9,12 @@ import androidx.lifecycle.LiveData;
 import com.google.gson.Gson;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
@@ -59,23 +65,23 @@ public class NoteAPI {
         }
     }
 
-    public Note getNote(String title){
-        title = title.replace(" ", "%20");
-
+    public Note getNote(String title) throws ExecutionException, InterruptedException, TimeoutException {
         var request = new Request.Builder()
                 .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
                 .method("GET", null)
                 .build();
 
-        try (var response = client.newCall(request).execute()) {
+        var executor = Executors.newSingleThreadExecutor();
+        Callable<Note> callable = () -> {
+            var response = client.newCall(request).execute();
             assert response.body() != null;
             var body = response.body().string();
             Log.i("GET NOTE", body);
             return Note.fromJSON(body);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return new Note(title, "");
+        };
+        Future<Note> future_get = executor.submit(callable);
+        Note note_get = future_get.get(1, TimeUnit.SECONDS);
+        return note_get;
     }
 
     public void putNote(Note note){
@@ -85,18 +91,30 @@ public class NoteAPI {
         var body = RequestBody.create(noteToJson(note), JSON);
         var request = new Request.Builder()
                 .url("https://sharednotes.goto.ucsd.edu/notes/" + title)
-                .post(body)
+                .method("PUT", body)
                 .build();
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
-            System.out.println(response.body().toString());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        var executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            Response response = null;
+            try {
+                response = client.newCall(request).execute();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            assert response.body() != null;
+            String body1 = null;
+            try {
+                body1 = response.body().string();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            Log.i("PUT NOTE", body1);
+        });
     }
 
     public String noteToJson(Note note) {
-        Gson gson = new Gson();
-        return gson.toJson(note);
+        String toJson = "{  " + "\"content\":" + "\"" + note.content + "\"" + "," + "\"updated_at\":" + "\"" + note.updatedAt + "\"" + "}";
+        Log.i("RIGHT FORMAT", toJson);
+        return toJson;
     }
 }

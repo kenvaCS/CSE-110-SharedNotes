@@ -6,9 +6,11 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class NoteRepository {
     private final NoteDao dao;
@@ -38,6 +40,7 @@ public class NoteRepository {
 
         Observer<Note> updateFromRemote = theirNote -> {
             var ourNote = note.getValue();
+            if (theirNote == null) return;
             if (ourNote == null || ourNote.updatedAt < theirNote.updatedAt) {
                 upsertLocal(theirNote);
             }
@@ -86,10 +89,20 @@ public class NoteRepository {
 
     public LiveData<Note> getRemote(String title) {
         // try to get remote thing
-        var noteData = new MutableLiveData<>(api.getNote(title));
+        var noteData = new MutableLiveData<Note>();
         var executor = Executors.newSingleThreadScheduledExecutor();
         noteFuture = executor.scheduleAtFixedRate(() -> {
-            noteData.postValue(api.getNote(title));}, 0, 3000, TimeUnit.MILLISECONDS);
+            try {
+                noteData.postValue(api.getNote(title));
+            } catch (ExecutionException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (TimeoutException e) {
+                throw new RuntimeException(e);
+            }
+        }, 0, 3000, TimeUnit.MILLISECONDS);
+
         return noteData;
     }
 
